@@ -1,0 +1,433 @@
+<?php
+error_reporting(0);
+set_time_limit(0);
+
+// Fungsi untuk memeriksa dan mengaktifkan fungsi jika belum diaktifkan
+function checkAndActivateFunction($functionName) {
+    if (!function_exists($functionName)) {
+        echo "Error: Function '$functionName' is not enabled on the server. Please enable the required functions and try again.";
+        exit();
+    }
+}
+
+// Daftar fungsi yang diperlukan
+$requiredFunctions = [
+    'scandir',
+    'is_file',
+    'is_dir',
+    'file_get_contents',
+    'file_put_contents',
+    'htmlentities',
+    'strpos',
+];
+
+// Memeriksa dan mengaktifkan fungsi-fungsi yang belum diaktifkan
+foreach ($requiredFunctions as $functionName) {
+    checkAndActivateFunction($functionName);
+}
+
+// Mulai menjalankan tools
+// ...
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RahmanRalei - Backdoor Scanner</title>
+
+    <style>
+        body {
+    font-family: 'Segoe UI';
+    background-color: #191d2b;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    background-color: #1c2331;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #6fdbe8;
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+    font-family: 'fantasy', cursive;
+}
+
+/* Gaya untuk tabel */
+.file-list {
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+.file-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.file-list th,
+.file-list td {
+    padding: 12px;
+    border-bottom: 1px solid #33425b;
+    text-align: left;
+    max-width: 300px; /* Atur lebar maksimum yang sesuai */
+    overflow-wrap: break-word; /* Untuk memastikan pemotongan kata */
+}
+
+
+.file-list th {
+    background-color: #2c384f;
+    font-weight: bold;
+    color: #6fdbe8;
+}
+
+.file-list td.actions {
+    text-align: center;
+}
+
+/* Gaya untuk tombol */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #6fdbe8;
+    color: #222;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.btn:hover {
+    background-color: #2ed573;
+    color: #fff;
+}
+
+  .code-container {
+    max-width: 100%;
+    overflow: auto;
+    word-wrap: break-word; /* Mengatur agar kata-kata dapat dipotong */
+    overflow-wrap: break-word; /* Pengaturan alternatif untuk kompatibilitas */
+}
+
+        .code-container pre {
+            background-color: #2c384f;
+            padding: 10px;
+            overflow-x: auto;
+            color: #fff;
+        }
+
+        .error {
+            color: #ff4757;
+            margin-bottom: 10px;
+        }
+
+        .success {
+            color: #2ed573;
+            margin-bottom: 10px;
+        }
+
+        .infected {
+            background-color: #ff4757;
+        }
+
+        .actions form {
+            display: inline-block;
+        }
+
+        .actions input[type="submit"] {           
+           margin-left: 5px;
+        }
+        
+        .scrollable-text {
+    max-width: 400px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scroll-behavior: smooth; /* Tambahkan ini untuk animasi gulir halus */
+    scrollbar-width: none; /* Sembunyikan scrollbar pada browser yang mendukung */
+    -ms-overflow-style: none; /* Sembunyikan scrollbar pada Microsoft Edge */
+}
+
+.scrollable-text::-webkit-scrollbar {
+    width: 0; /* Sembunyikan scrollbar pada browser Webkit (Chrome, Safari, dll.) */
+}
+
+        
+        .loading {
+            margin-bottom: 10px;
+            color: #2ed573;
+            text-align: center;
+            display: none;
+        }
+
+       select {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+}
+
+select:focus {
+  outline: none;
+  border-color: #6fdbe8;
+}
+
+select option {
+  background-color: #fff;
+  color: #333;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="font-family: 'fantasy', cursive;">[ $ ] RahmanRalei - Backdoor Scanner [ $ ]</h2>
+
+        <?php
+        // Fungsi untuk mendapatkan daftar file di dalam direktori
+        function getFiles($dir)
+{
+    $files = array();
+    $entries = scandir($dir);
+
+    foreach ($entries as $entry) {
+        if ($entry == '.' || $entry == '..') {
+            continue;
+        }
+
+        $path = $dir . '/' . $entry;
+        $fileExtension = pathinfo($path, PATHINFO_EXTENSION);
+
+        // Check if the file extension is in the allowed list
+        $allowedExtensions = ['php', 'php4', 'php5', 'php7', 'php8', 'alfa', 'py', 'perl', 'phtml', 'html', 'phtm', 'inc', 'module'];
+        if (is_file($path) && in_array($fileExtension, $allowedExtensions)) {
+            $files[] = $path;
+        } elseif (is_dir($path)) {
+            $nestedFiles = getFiles($path); // Recursively call the function for subdirectories
+            $files = array_merge($files, $nestedFiles);
+        }
+    }
+
+    return $files;
+}
+
+        // Fungsi untuk memeriksa apakah file mengandung backdoor
+        function isBackdoor($file, $method)
+        {
+            $contents = file_get_contents($file);
+
+            // Tambahkan deteksi backdoor sesuai dengan metode yang dipilih
+            if ($method === 'base64_decode') {
+                if (strpos($contents, 'base64_decode(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'gzinflate') {
+                if (strpos($contents, 'gzinflate(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'eval') {
+                if (strpos($contents, 'eval(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'sex') {
+                if (strpos($contents, 'shell_exec(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'exec') {
+                if (strpos($contents, 'exec(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'system') {
+                if (strpos($contents, 'system(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'gzun') {
+                if (strpos($contents, 'gzuncompress(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'isread') {
+                if (strpos($contents, 'is_readable(') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'iswrita') {
+                if (strpos($contents, 'is_writable(') !== false) {
+                    return true;
+                }            
+           } elseif ($method === 'chmod') {
+                if (strpos($contents, 'chmod') !== false) {
+                    return true;
+                }
+           } elseif ($method === 'hex') {
+                if (strpos($contents, 'hex') !== false) {
+                    return true;
+                }
+           } elseif ($method === 'goto') {
+                if (strpos($contents, 'goto') !== false) {
+                    return true;
+                }
+          } elseif ($method === 'adm') {
+                if (strpos($contents, '$_SESSION["adm"]') !== false) {
+                    return true;
+                } 
+            } elseif ($method === 'slot') {
+                if (strpos($contents, 'slot') !== false) {
+                    return true;
+                }
+            } elseif ($method === 'gacor') {
+                if (strpos($contents, 'gacor') !== false) {
+                    return true;
+                }
+            }
+            
+            
+            
+            return false;
+        }
+
+        // Fungsi untuk melihat kode file
+        function viewCode($file)
+        {
+            $contents = htmlentities(file_get_contents($file));
+            echo '<div class="code-container"><pre>' . $contents . '</pre></div>';
+        }
+
+        // Fungsi untuk menghapus kode backdoor dari file
+        function deleteCode($file)
+        {
+            // Tulis kembali isi file yang telah diubah
+            file_put_contents($file, '');
+
+            echo '<div class="success">Kode backdoor telah dihapus dari file.</div>';
+            echo '<div class="code-container"><pre>' . htmlentities($contents) . '</pre></div>';
+        }
+
+        // Memeriksa apakah tombol "View Code" telah ditekan
+        if (isset($_POST['view'])) {
+            $file = $_POST['file'];
+            echo '<h2>View Code: ' . $file . '</h2>';
+            viewCode($file);
+        }
+
+        // Memeriksa apakah tombol "Delete Code" telah ditekan
+        if (isset($_POST['delete'])) {
+            $file = $_POST['file'];
+            echo '<h2>Delete Code: ' . $file . '</h2>';
+            deleteCode($file);
+        }
+
+        // Memeriksa apakah tombol "Scan" telah ditekan
+        if (isset($_POST['submit'])) {
+            $directory = $_SERVER['DOCUMENT_ROOT'];
+            $files = getFiles($directory);
+            $infectedFiles = array();
+            $scanMethod = $_POST['scanMethod'];
+
+            // Menampilkan loading
+            echo '<div class="loading" id="loading">Scanning files...</div>';
+            echo '<div class="" id="">Searching : ' . $scanMethod . '</div>';
+            flush();
+        ?>
+            <script>
+                window.addEventListener('DOMContentLoaded', function () {
+                    var loading = document.getElementById('loading');
+                    loading.style.display = 'block';
+                });
+            </script>
+        <?php
+            flush();
+
+            // Memeriksa setiap file untuk keberadaan backdoor
+              $count = 1;
+              foreach ($files as $file) {
+                if (isBackdoor($file, $scanMethod)) {
+                    $infectedFiles[] = $file;
+
+                    // Output flush untuk setiap file yang terinfeksi
+                    echo '<div class="file-list">';
+                    echo '<table>';
+                    echo '<tr><th>No</th><th>File</th><th>Status</th><th>Actions</th></tr>';
+                    echo '<tr>';
+                    echo '<td>' . $count . '</td>';
+                    echo '<td><pre class="scrollable-text">' . $file . '</pre></td>';
+                    echo '<td class="error">Detected</td>';
+                    echo '<td class="actions">';
+                    echo '<form method="post" action="">';
+                    echo '<input type="hidden" name="file" value="' . $file . '">';
+                    echo '<input type="submit" name="view" value="View Code" class="btn">';
+                    echo '<input type="submit" name="delete" value="Delete Code" class="btn">';
+                    echo '</form>';
+                    echo '</td>';
+                    echo '</tr>';
+                    flush();
+                    $count++;
+                }
+            }
+
+            echo '</table>';
+            echo '</div>';
+            flush();
+        }
+        ?>
+
+        <form method="post" action="">
+            <div class="form-group">
+                <label for="scanMethod">Scan Method:</label>
+                <select name="scanMethod" id="scanMethod">
+                    <option value="isread">is_readable</option>
+                    <option value="iswrita">is_writable</option>
+                    <option value="base64_decode">base64_decode</option>
+                    <option value="gzinflate">gzinflate</option>
+                    <option value="eval">eval</option>
+                    <option value="sex">shell_exec</option>
+                    <option value="exec">exec</option>
+                    <option value="system">system</option>
+                    <option value="gzun">gzuncompress</option>
+                   <option value="goto">goto</option>
+                 <option value="chmod">chmod</option>
+                 <option value="hex">hex</option>
+                 <option value="adm">adm</option>
+                    <option value="slot">slot</option>
+                    <option value="gacor">gacor</option>
+                </select>
+            </div>
+            <input type="submit" name="submit" value="Scan Me" class="btn">
+        </form>
+    </div>
+</body>
+<script>
+    // Tunggu hingga konten dokumen selesai dimuat
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ambil semua elemen dengan kelas scrollable-text
+        var scrollableElements = document.querySelectorAll('.scrollable-text');
+
+        // Fungsi untuk mengatur posisi scroll ke paling akhir kanan
+        function scrollToRight(element) {
+            element.scrollLeft = element.scrollWidth - element.clientWidth;
+        }
+
+        // Iterasi melalui setiap elemen scrollable-text
+        scrollableElements.forEach(function(element) {
+            // Atur posisi scroll ke paling akhir kanan untuk setiap elemen
+            scrollToRight(element);
+
+            // Tambahkan event listener untuk memastikan elemen tetap di paling akhir kanan saat halaman diresize
+            window.addEventListener('resize', function() {
+                scrollToRight(element);
+            });
+        });
+    });
+</script>
+
+
+</html>
